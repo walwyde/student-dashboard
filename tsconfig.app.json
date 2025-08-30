@@ -28,5 +28,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["src/pages"]
+  "include": ["src/pages", "lib", "src/components", "src/app", "src/hooks", "src/integrations", "src/types", "src/lib", "src/styles", "src/utils"],
+  "exclude": ["node_modules", "dist", "test", "**/*spec.ts", "**/*spec.tsx", "**/*test.ts", "**/*test.tsx"]
 }
