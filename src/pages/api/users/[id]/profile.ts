@@ -1,6 +1,6 @@
 // pages/api/users/[id]/profile.ts
 import { NextApiRequest, NextApiResponse } from 'next';
-import { MongoClient } from 'mongodb';
+import { MongoClient, WithId, Document, ObjectId } from 'mongodb';
 import jwt from 'jsonwebtoken';
 
 const MONGODB_URI = process.env.MONGODB_URI!;
@@ -38,11 +38,12 @@ async function getProfile(req: NextApiRequest, res: NextApiResponse, userId: str
     const db = client.db();
     const profiles = db.collection('profiles');
 
-    const profile = await profiles.findOne({ userId });
+    var profile: WithId<Document> = await profiles.findOne({ userId });
 
     if (!profile) {
       // Create default profile if it doesn't exist
-      const newProfile = {
+       profile = {
+        _id: new ObjectId(),
         userId,
         bio: '',
         avatar: '',
@@ -50,10 +51,11 @@ async function getProfile(req: NextApiRequest, res: NextApiResponse, userId: str
         createdAt: new Date(),
       };
       
-      await profiles.insertOne(newProfile);
-      return res.status(200).json(newProfile);
-    }
+      await profiles.insertOne(profile);
 
+      return res.status(200).json(profile);
+    }
+    console.log(profile)
     res.status(200).json(profile);
   } catch (error) {
     console.error('Error fetching profile:', error);
@@ -64,22 +66,24 @@ async function getProfile(req: NextApiRequest, res: NextApiResponse, userId: str
 }
 
 async function updateProfile(req: NextApiRequest, res: NextApiResponse, userId: string) {
-  const authHeader = req.headers.authorization;
-  const token = authHeader?.split(' ')[1];
+const authHeader = req.headers.authorization;
+const token = Array.isArray(authHeader) ? authHeader[0]?.split(' ')[1] : authHeader?.split(' ')[1];
+if (!token) {
+  return res.status(401).json({ message: 'No token provided' });
+}
 
-  if (!token) {
-    return res.status(401).json({ message: 'No token provided' });
-  }
+const client = new MongoClient(MONGODB_URI);
 
-  const client = new MongoClient(MONGODB_URI);
-
-  try {
-    // Verify token and ensure user can only update their own profile
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
-    
-    if (decoded.userId !== userId) {
+try {
+  // Verify token and ensure user can only update their own profile
+  const decoded = jwt.verify(token as string, JWT_SECRET) as unknown as { userId: string };
+  
+  if (decoded.userId.toString() !== userId.toString()) {
+      console.log("Unauthorized profile update attempt:", { decodedUserId: decoded.userId, targetUserId: userId });
       return res.status(403).json({ message: 'Forbidden' });
     }
+
+    console.log("request-body", req.body)
 
     await client.connect();
     const db = client.db();
@@ -91,12 +95,13 @@ async function updateProfile(req: NextApiRequest, res: NextApiResponse, userId: 
       updatedAt: new Date(),
     };
 
-    const result = await profiles.updateOne(
+    const result = await profiles.findOneAndUpdate(
       { userId },
       { $set: updateData },
       { upsert: true }
     );
-
+    
+console.log("updated", result)
     res.status(200).json({ message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Error updating profile:', error);

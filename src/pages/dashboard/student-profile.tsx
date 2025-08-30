@@ -8,51 +8,56 @@ import { Label } from "@/src/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { useToast } from "@/src/hooks/use-toast";
 import { Loader2 } from "lucide-react";
-import { set } from "date-fns";
+import * as profileActions from "@/src/Actions/profileActions";
+import { Textarea } from "@/src/components/ui/textarea";
+import { fetchProfile } from "@/src/Actions/profileActions";
 
 const StudentProfile = () => {
 
-  const { user, profile, loading} = useAuth() as any;
+  const { user, loading} = useAuth() as any;
 
   const { toast } = useToast();
 
-  const [profileData, setProfileData] = useState<any>(null);
   const [saving, setSaving] = useState(false);
   // Form state
   const [studentId, setStudentId] = useState("");
   const [studyYear, setStudyYear] = useState("");
   const [program, setProgram] = useState("");
-
-    useEffect(() => {
-    if (profile !==null) {
-        setProfileData(profile);
-        setStudentId(profile.student_id || "");
-        setStudyYear(profile.study_year ? profileData.study_year.toString() : "");
-        setProgram(profile.program || "");
-     }
-  }, [profileData]);
-
-  const handleSaveProfile = async (e: React.FormEvent) => {
-      try {
-        e.preventDefault();
+  const [userId, setUserId] = useState(user?.id || "");
+  const [studentBio, setStudentBio] = useState("");
+  const [full_name, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [profile, setProfile] = useState(null)
+    
+    const handleSaveProfile = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setUserId(user?.id);
         setSaving(true);
-      toast({
-        title: "Success",
-        description: "Student profile updated successfully",
+        await profileActions.updateProfile({
+          user_id: user.id,
+          student_id: studentId,
+          study_year: parseInt(studyYear),
+          program : program,
+          full_name: full_name,
+          email: email,
+          bio: studentBio    
         });
-
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-        type: "background",
-        draggable: true,
-      });
-    } finally {
+    
       setSaving(false);
-    }
+      loadProfile()
   };
+
+  const loadProfile = async () => {
+    if(user) {
+      const profile = await fetchProfile(user?.id)
+      console.log(profile)
+      setProfile(profile)
+    }
+  }
+
+  useEffect(()=>{
+    loadProfile()
+  },[user?.id])
 
   if (loading) {
     return (
@@ -74,8 +79,8 @@ const StudentProfile = () => {
           </p>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
+      <div className="grid gap-6 md:grid-cols-2">
+          { loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> :  <Card>
             <CardHeader>
               <CardTitle>Personal Information</CardTitle>
             </CardHeader>
@@ -89,12 +94,12 @@ const StudentProfile = () => {
                 <Input value={profile?.email || ""} disabled />
               </div>
               <div className="space-y-2">
-                <Label>Role</Label>
-                <Input value={profile?.role || ""} disabled className="capitalize" />
+                <Label>Study Year</Label>
+                <Input value={profile?.study_year || ""} disabled className="capitalize" />
               </div>
             </CardContent>
           </Card>
-
+}
           <Card>
             <CardHeader>
               <CardTitle>Academic Information</CardTitle>
@@ -108,6 +113,36 @@ const StudentProfile = () => {
                     value={studentId}
                     onChange={(e) => setStudentId(e.target.value)}
                     placeholder="Enter your student ID"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="Full Name">Student Name</Label>
+                  <Input
+                    id="studentId"
+                    value={full_name}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your full name"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="Full Name">Student Email</Label>
+                  <Input
+                    id="studentId"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your email"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="studentId">Student Bio</Label>
+                  <Textarea
+                    id="studentId"
+                    value={studentBio}
+                    onChange={(e) => setStudentBio(e.target.value)}
+                    placeholder="Enter a short bio"
                     required
                   />
                 </div>

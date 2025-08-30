@@ -1,11 +1,15 @@
-import { useRef } from "react";
+import { useRef, useEffect, useState } from "react";
+import Image from "next/image";
 import { Card, CardContent } from "@/src/components/ui/card";
 import { Button } from "@/src/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
 import { Separator } from "@/src/components/ui/seperator";
 import { Badge } from "@/src/components/ui/badge";
 import { Download, Printer } from "lucide-react";
+import { generateBarcode } from "../lib/generate-barcode";
+import universityLogo from "../public/images/universityLogo.png"; // Ensure your build setup supports image imports
 
+// const universityLogo = "../public/images/universityLogo.png"; // Replace with your university logo path
 interface StudentIDCardProps {
   student: {
     full_name: string;
@@ -24,39 +28,39 @@ const StudentIDCard = ({ student, profile }: StudentIDCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
   // Generate a simple barcode-like pattern using the student ID
-  const generateBarcode = (studentId: string) => {
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    canvas.width = 200;
-    canvas.height = 50;
+  // const generateBarcode = (studentId: string) => {
+  //   const canvas = document.createElement('canvas');
+  //   const ctx = canvas.getContext('2d');
+  //   canvas.width = 200;
+  //   canvas.height = 45;
     
-    if (ctx) {
-      ctx.fillStyle = '#000000';
-      let x = 10;
+  //   if (ctx) {
+  //     ctx.fillStyle = '#000000';
+  //     let x = 5;
       
-      // Create a pattern based on student ID
-      for (let i = 0; i < studentId.length; i++) {
-        const charCode = studentId.charCodeAt(i);
-        const width = (charCode % 5) + 2;
-        const height = 40;
+  //     // Create a pattern based on student ID
+  //     for (let i = 0; i < studentId.length; i++) {
+  //       const charCode = studentId.charCodeAt(i);
+  //       const width = (charCode % 6) + 4;
+  //       const height = 100;
         
-        if (i % 2 === 0) {
-          ctx.fillRect(x, 5, width, height);
-        }
-        x += width + 2;
-      }
+  //       if (i % 2 === 0) {
+  //         ctx.fillRect(x, 5, width, height);
+  //       }
+  //       x += width + 1;
+  //     }
       
-      // Add some random bars for visual effect
-      for (let i = 0; i < 10; i++) {
-        const width = Math.random() * 3 + 1;
-        const height = 35 + Math.random() * 10;
-        ctx.fillRect(x, 10, width, height);
-        x += width + 1;
-      }
-    }
+  //     // Add some random bars for visual effect
+  //     for (let i = 0; i < 5; i++) {
+  //       const width = Math.random() * 3 + 10;
+  //       const height = 100 + Math.random() * 10;
+  //       ctx.fillRect(x, 1, width, height);
+  //       x += width + 1;
+  //     }
+  //   }
     
-    return canvas.toDataURL();
-  };
+  //   return canvas.toDataURL();
+  // };
 
   const handlePrint = () => {
     if (cardRef.current) {
@@ -104,7 +108,17 @@ Generated: ${new Date().toLocaleDateString()}
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
 
-  const barcodeImage = generateBarcode(student.student_id);
+  // ...rest of your imports
+
+  const [barcodeImage, setBarcodeImage] = useState<string>("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setBarcodeImage(generateBarcode(student.student_id));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student.student_id]);
+  const [flipped, setFlipped] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -122,77 +136,138 @@ Generated: ${new Date().toLocaleDateString()}
         </div>
       </div>
 
-      <Card className="w-full max-w-md mx-auto" ref={cardRef}>
-        <CardContent className="p-6">
-          {/* University Header */}
-          <div className="text-center mb-4">
-            <h3 className="text-lg font-bold text-primary">UNIVERSITY NAME</h3>
-            <p className="text-sm text-muted-foreground">Student Identification Card</p>
-          </div>
+     <div
+     className="relative mx-auto aspect-[1.586/1] w-[442px] cursor-pointer [perspective:1000px]"
+  onClick={() => setFlipped((f) => !f)}
+  ref={cardRef}
+    >
+      <div
+        className={`relative h-full w-full transition-transform duration-700 [transform-style:preserve-3d] ${
+          flipped ? "[transform:rotateY(180deg)]" : ""
+        }`}
+      >
+        {/* FRONT FACE */}
+        <Card className="absolute inset-0 h-full w-full rounded-md border bg-white shadow-md [backface-visibility:hidden]">
+          <CardContent className="p-4 flex flex-col h-full justify-between relative overflow-hidden">
+            {/* Watermark */}
+            <Image
+            width={100}
+            height={100}
 
-          <Separator className="mb-4" />
-
-          {/* Student Photo and Basic Info */}
-          <div className="flex items-center space-x-4 mb-4">
-            <Avatar className="w-20 h-20">
-              <AvatarImage src={student.profile_image_url} alt={student.full_name} />
-              <AvatarFallback className="text-lg font-semibold">
-                {getInitials(student.full_name)}
-              </AvatarFallback>
-            </Avatar>
-            
-            <div className="flex-1">
-              <h4 className="font-semibold text-lg text-foreground">{student.full_name}</h4>
-              <p className="text-sm text-muted-foreground">ID: {student.student_id}</p>
-              <Badge variant="secondary" className="mt-1">
-                Year {student.study_year}
-              </Badge>
-            </div>
-          </div>
-
-          {/* Program and Details */}
-          <div className="space-y-2 mb-4">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Program:</span>
-              <span className="text-sm font-medium">{student.program}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Email:</span>
-              <span className="text-sm font-medium">{profile.email}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Valid Until:</span>
-              <span className="text-sm font-medium">
-                {new Date(new Date().getFullYear() + 1, 11, 31).toLocaleDateString()}
-              </span>
-            </div>
-          </div>
-
-          <Separator className="mb-4" />
-
-          {/* Barcode */}
-          <div className="text-center">
-            <p className="text-xs text-muted-foreground mb-2">Scan for verification</p>
-            <img 
-              src={barcodeImage} 
-              alt="Student ID Barcode" 
-              className="mx-auto border rounded"
-              style={{ maxWidth: '100%', height: 'auto' }}
+              src={universityLogo}
+              alt="Logo watermark"
+              className="absolute top-1/2 left-1/2 w-[200px] -translate-x-1/2 -translate-y-1/2 opacity-10 pointer-events-none"
             />
-            <p className="text-xs text-muted-foreground mt-1">{student.student_id}</p>
-          </div>
 
-          {/* Footer */}
-          <div className="text-center mt-4">
-            <p className="text-xs text-muted-foreground">
-              This card is the property of the University
-            </p>
-            <p className="text-xs text-muted-foreground">
-              If found, please return to Student Services
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+            <div className="relative">
+              {/* Header */}
+              <div className="text-center mb-2">
+                <Image
+                width={100}
+                height={100}
+                  src={universityLogo}
+                  alt="Baze University Logo"
+                  className="mx-auto w-14 mb-1"
+                />
+                <h3 className="text-base font-bold text-primary uppercase">
+                  BASE UNIVERSITY STUDENT ID
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Student Identification Card
+                </p>
+              </div>
+
+              <Separator className="mb-2" />
+
+              {/* Student Info */}
+              <div className="flex items-center space-x-3 mb-2">
+                <Avatar className="w-16 h-16 border">
+                  <AvatarImage src={student.profile_image_url} alt={student.full_name} />
+                  <AvatarFallback className="text-sm font-semibold">
+                    {student.full_name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm text-foreground leading-tight">
+                    {student.full_name}
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    ID: {student.student_id}
+                  </p>
+                  <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0.5">
+                    Year {student.study_year}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* More Info */}
+              <div className="text-[11px] space-y-1 mb-2">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Program:</span>
+                  <span className="font-medium">{student.program}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Email:</span>
+                  <span className="font-medium truncate">{profile.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Valid Until:</span>
+                  <span className="font-medium">
+                    {new Date(new Date().getFullYear() + 1, 11, 31).toLocaleDateString()}
+                  </span>
+                </div>
+              </div>
+
+              <Separator className="mb-2" />
+
+              <div className="text-center text-[9px] leading-tight text-muted-foreground">
+                <p>Tap to flip card</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* BACK FACE */}
+        <Card className="absolute inset-0 h-full w-full rounded-md border bg-white shadow-md [transform:rotateY(180deg)] [backface-visibility:hidden]">
+          <CardContent className="p-4 flex flex-col h-full justify-between relative overflow-hidden">
+            {/* Watermark */}
+            <Image
+            width={100}
+            height={100}
+              src={universityLogo}
+              alt="Logo watermark"
+              className="absolute top-1/2 left-1/2 w-[200px] -translate-x-1/2 -translate-y-1/2 opacity-10 pointer-events-none"
+            />
+
+            <div className="relative flex flex-col h-full justify-between">
+              <div className="flex flex-col items-center justify-center flex-1">
+                <p className="text-[10px] text-muted-foreground mb-1">
+                  Scan for verification
+                </p>
+                <Image
+                width={100}
+                height={100}
+                  src={barcodeImage}
+                  alt="Student ID Barcode"
+                  className="border rounded-sm bg-white"
+                  style={{ maxWidth: "80%", height: "32px" }}
+                />
+              </div>
+
+              <div className="text-center text-[9px] leading-tight text-muted-foreground mt-2">
+                <p>This card is the property of the University</p>
+                <p>If found, please return to Student Services</p>
+                <p className="mt-1">Tap to flip back</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+
     </div>
   );
 };

@@ -150,7 +150,7 @@
 
 import { useEffect, useState } from "react";
 import { useToast } from "@/src/hooks/use-toast";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 
 // Types for your user/session data
 interface User {
@@ -182,7 +182,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
   const { toast } = useToast();
-
+  const router = useRouter();
   const checkExistingSession = async () => {
     try {
       const token = localStorage.getItem('auth_token');
@@ -199,15 +199,15 @@ export function useAuth() {
         },
       });
 
-      if (response.ok) {
+      if (response.status === 200) {
         const { user, session } = await response.json();
         setUser(user);
         setSession(session);
         
         // Fetch profile data
-        if (user?.id) {
-          await fetchProfile(user.id);
-        }
+        // if (user?.id) {
+          // await fetchProfile(user.id);
+        // }
       } else {
         // Invalid token, clear it
         localStorage.removeItem('auth_token');
@@ -220,22 +220,26 @@ export function useAuth() {
     }
   };
 
-  const fetchProfile = async (userId: string) => {
-    try {
-      const response = await fetch(`/api/users/${userId}/profile`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
-        },
-      });
+  // const fetchProfile = async (userId: string) => {
+  //   try {
+  //     setLoading(true);
+  //     const response = await fetch(`/api/users/${userId}/profile`, {
+  //       headers: {
+  //         'Authorization': `Bearer ${localStorage.getItem('auth_token')}`,
+  //       },
+  //     });
 
-      if (response.ok) {
-        const profileData = await response.json();
-        setProfile(profileData);
-      }
-    } catch (error) {
-      console.error('Error fetching profile:', error);
-    }
-  };
+  //     if (response.status !== 200) {
+  //       throw new Error('Failed to fetch profile');
+  //     }
+  //     const profileData = await response.json();
+  //     console.log("Fetched profile:", profileData);
+  //     setProfile(profileData.profile);
+  //     setLoading(false);
+  //   } catch (error) {
+  //     console.error('Error fetching profile:', error);
+  //   }
+  // };
 
   const signUp = async (email: string, password: string, fullName: string, role: string = 'student') => {
     try {
@@ -299,9 +303,9 @@ export function useAuth() {
       setSession(session);
 
       // Fetch profile
-      if (user?.id) {
-        await fetchProfile(user.id);
-      }
+      // if (user?.id) {
+        // await fetchProfile(user?.id);
+      // }
 
       toast({
         title: "Sign in successful!",
@@ -338,7 +342,7 @@ export function useAuth() {
         title: "Signed out successfully",
         description: "See you next time!",
       });
-      useRouter().push("/auth");
+      router.push("/auth");
     } catch (error: any) {
       // Still clear local state even if API call fails
       localStorage.removeItem('auth_token');
@@ -350,14 +354,16 @@ export function useAuth() {
         title: "Signed out",
         description: "You have been signed out locally.",
       });
+      router.push("/auth");
     }
   };
 
    useEffect(() => {
     // Check for existing session on mount
     checkExistingSession();
+    // fetchProfile(user?.id as string);
   }, []);
-
+console.log("Auth State:", { user, session, profile, loading });
   return {
     user,
     session,
@@ -366,6 +372,6 @@ export function useAuth() {
     signUp,
     signIn,
     signOut,
-    fetchProfile
+    // fetchProfile
   };
 }

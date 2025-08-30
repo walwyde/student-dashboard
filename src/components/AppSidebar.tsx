@@ -1,5 +1,6 @@
+import * as React from 'react';
 import Link from "next/link";
-import { usePathname} from "next/navigation";
+import { usePathname, useRouter} from "next/navigation";
 import { 
   User, 
   CreditCard, 
@@ -29,6 +30,8 @@ import { Button } from "@/src/components/ui/button";
 import { useAuth } from "@/src/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
 
+import { fetchProfile } from "../Actions/profileActions";
+
 const studentItems = [
   { title: "Dashboard", url: "/dashboard", icon: User },
   { title: "Profile", url: "/dashboard/profile", icon: User },
@@ -46,9 +49,20 @@ const adminItems = [
 
 export function AppSidebar() {
   const { state } = useSidebar();
-  const { user, profile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const location = usePathname();
+  const router = useRouter();
   const currentPath = location || "/dashboard";
+  const [profile, setProfile] = React.useState(null)
+
+const loadProfile = async() => {
+  const profileData = await fetchProfile(user?.id)
+  setProfile(profileData)
+}
+
+React.useEffect(() => {
+  loadProfile()
+}, [user?.id])
 
   const isActive = (path: string) => currentPath === path;
   const getNavCls = ({ isActive }: { isActive: boolean }) =>
@@ -128,7 +142,9 @@ export function AppSidebar() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={signOut}
+              onClick={() => {signOut
+                router.replace("/auth")
+              }}
               className="w-full justify-start text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             >
               <LogOut className="w-4 h-4" />
